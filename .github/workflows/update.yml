@@ -27,7 +27,7 @@ jobs:
 
     - name: Generate Playlist
       env:
-        JAG_URL: ${{ secrets.JAG_URL }}
+        JAG_URL: ${{ secrets.JAG_URL }}   # ✅ match with python
       run: python main.py
 
     - name: Push to External Private Repo
