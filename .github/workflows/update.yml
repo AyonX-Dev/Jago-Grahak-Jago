@@ -1,0 +1,71 @@
+name: Update M3U8 Playlist
+
+on:
+  push:
+    branches: [ master, main ]
+  schedule:
+    - cron: '*/20 * * * *'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Generate Playlist
+      env:
+        JAG_URL: ${{ secrets.JAG_URL }}
+      run: python main.py
+
+    # ❌ REMOVE local commit
+    # ✅ ADD cross-repo push
+
+    - name: Push to External Private Repo
+      env:
+        TOKEN: ${{ secrets.PAT_TOKEN }}
+        TARGET: ${{ secrets.TARGET_REPO }}
+      run: |
+        git clone https://$TOKEN@github.com/$TARGET target-repo
+        
+        mkdir -p target-repo/jago
+        cp playlist.m3u8 target-repo/jago/playlist.m3u8
+        
+        cd target-repo
+        git config user.name "github-actions"
+        git config user.email "actions@github.com"
+        
+        git add jago/playlist.m3u8
+        git diff --quiet && git diff --staged --quiet || (git commit -m "Auto update playlist" && git push)
+
+    # Docker part unchanged
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: |
+          ghcr.io/${{ github.repository }}:latest
+          ghcr.io/${{ github.repository }}:${{ github.sha }}
