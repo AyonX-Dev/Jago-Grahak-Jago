@@ -10,9 +10,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
 
     steps:
     - name: Checkout repository
@@ -33,7 +30,6 @@ jobs:
         JAG_URL: ${{ secrets.JAG_URL }}
       run: python main.py
 
-    # ✅ Push to external private repo
     - name: Push to External Private Repo
       env:
         TOKEN: ${{ secrets.PAT_TOKEN }}
@@ -50,27 +46,3 @@ jobs:
         
         git add jago/playlist.m3u8
         git diff --quiet && git diff --staged --quiet || (git commit -m "Auto update playlist" && git push)
-
-    # ✅ Login to GHCR
-    - name: Log in to GitHub Container Registry
-      uses: docker/login-action@v2
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
-    # ✅ Convert owner to lowercase
-    - name: Set lowercase repo owner
-      id: repo
-      run: |
-        echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
-
-    # ✅ Build & Push Docker image (fixed)
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v4
-      with:
-        context: .
-        push: true
-        tags: |
-          ghcr.io/${{ steps.repo.outputs.owner }}/jago-grahak-jago:latest
-          ghcr.io/${{ steps.repo.outputs.owner }}/jago-grahak-jago:${{ github.sha }}
