@@ -5,7 +5,7 @@ import ast
 import os
 from concurrent.futures import ThreadPoolExecutor
 
-# 🔐 ONLY Secret ভিত্তিক (no fallback)
+# ✅ Secret থেকে URL
 BASE_URL = os.environ.get("JAG_URL")
 
 if not BASE_URL:
@@ -31,16 +31,14 @@ def generate_playlist():
         'Accept-Language': 'en-US,en;q=0.5',
         'Connection': 'keep-alive',
         'Upgrade-Insecure-Requests': '1',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Sec-Fetch-User': '?1'
+        'Referer': BASE_URL,
+        'Origin': BASE_URL
     })
     
     # Extract channel URLs
     for cat in categories:
         try:
-            r = session.get(cat, timeout=10)
+            r = session.get(cat, timeout=15)
             soup = BeautifulSoup(r.text, 'html.parser')
             links = soup.find_all('a', href=True)
             for a in links:
@@ -87,7 +85,7 @@ def generate_playlist():
 
 def extract_m3u8_from_page(session, url, title, logo):
     try:
-        r = session.get(url, timeout=10)
+        r = session.get(url, timeout=15)
         html = r.text
         
         iframe_match = re.search(r'<iframe[^>]*src=[\"\']?([^\"\'>]+embed\.php[^\"\'>]+)[\"\']?[^>]*>', html, re.IGNORECASE)
@@ -100,7 +98,7 @@ def extract_m3u8_from_page(session, url, title, logo):
         embed_url = iframe_match.group(1)
         headers = {'Referer': url}
         
-        embed_r = session.get(embed_url, headers=headers, timeout=10)
+        embed_r = session.get(embed_url, headers=headers, timeout=15)
         embed_html = embed_r.text
         
         src_match = re.search(r'src:\s*([a-zA-Z0-9_]+)\(\),', embed_html)
